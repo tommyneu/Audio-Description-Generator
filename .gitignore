@@ -1,5 +1,7 @@
 *
 !.gitignore
 !describe_video.py
+!new_describe_video.py
 !readme.md
 !requirements.txt
+!tmp/
