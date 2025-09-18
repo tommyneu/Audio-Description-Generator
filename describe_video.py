@@ -1,7 +1,7 @@
 import cv2
 import subprocess
 import json
-import pyttsx3
+from gtts import gTTS
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from moviepy.audio.io.AudioFileClip import AudioFileClip
 from moviepy.video.VideoClip import ImageClip
@@ -61,17 +61,22 @@ def detect_scenes(video_path):
 
 
 # -------------------------------
-# TTS (offline)
+# TTS
 # -------------------------------
-def tts_pyttsx3(text, out_path):
-    engine = pyttsx3.init()
-    engine.setProperty("rate", 160)
-    engine.setProperty("volume", 1.0)
-    voices = engine.getProperty("voices")
-    if voices:
-        engine.setProperty("voice", voices[0].id)
-    engine.save_to_file(text, out_path)
-    engine.runAndWait()
+def create_audio_from_text(text, filename):
+    """
+    Converts a given text into a WAV audio file using the gTTS library.
+    """
+    try:
+        tts = gTTS(text=text, lang='en')
+        tts.save(filename)
+        return True
+    except Exception as e:
+        print(f"Error generating audio for '{text}': {e}")
+        # Create a placeholder silent audio file if gTTS fails
+        # A 2-second silent audio file
+        subprocess.run(['ffmpeg', '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=mono', '-t', '2', '-q:a', '9', '-acodec', 'libmp3lame', filename], check=True)
+        return False
 
 
 # -------------------------------
@@ -115,7 +120,7 @@ def process_video(video_path, output_path="described_paused.mp4"):
 
         # Narration audio
         tts_path = f"tts_{i}.wav"
-        tts_pyttsx3(desc, tts_path)
+        create_audio_from_text(desc, tts_path)
         narration_audio = AudioFileClip(tts_path)
         freeze_duration = narration_audio.duration + 0.5
 
