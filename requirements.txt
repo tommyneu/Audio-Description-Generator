@@ -1,0 +1,5 @@
+opencv-python>=4.7.0
+moviepy==1.0.3
+scenedetect>=0.6.0
+gtts
+rapidfuzz>=2.15.1
