@@ -1,4 +1,4 @@
-moviepy
 gtts
 scenedetect[opencv]
 pylint
+ollama
