@@ -1,0 +1,3 @@
+[tool.pylint]
+max-line-length = 200
+max-locals = 30

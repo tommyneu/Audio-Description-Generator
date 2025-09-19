@@ -5,3 +5,5 @@
 !readme.md
 !requirements.txt
 !tmp/
+!ffmpeg_helper.py
+!pyproject.toml
