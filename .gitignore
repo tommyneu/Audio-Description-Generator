@@ -8,3 +8,7 @@
 !ffmpeg_helper.py
 !pyproject.toml
 !.python-version
+!audio_block_detect.py
+!describe_scene.py
+!text_to_speech.py
+!visual_scene_detect.py
