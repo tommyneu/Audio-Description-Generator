@@ -30,6 +30,29 @@ def set_debug(new_debug:bool):
     global VIDEO_ENCODING
     VIDEO_ENCODING = new_debug
 
+def video_to_audio_wav(video_input:str, audio_output:str):
+    """ Converts a video file to the audio wav file """
+    cmd = [
+        'ffmpeg', '-y', '-i', video_input,
+        '-ac', '1', '-ar', '16000',
+        audio_output
+    ]
+
+    if not DEBUG:
+        cmd.extend(['-loglevel', 'error'])
+
+    subprocess.run(cmd, check=True)
+
+def get_duration(media_input:str) -> float:
+    """ Converts a video file to the audio wav file """
+    cmd = [
+        'ffprobe', '-i', media_input,
+        '-show_entries', 'format=duration', '-v', 'quiet', '-of', 'csv=p=0'
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    return float(result.stdout)
+
 def normalize_video(video_input:str, video_output:str):
     """ Taking the input video and normalizing it to standard video parameters """
     cmd = [
@@ -73,7 +96,22 @@ def cut_video_into_clip(video_input:str, video_output:str, start_time:str, end_t
 def save_first_frame_as_image(video_input:str, image_output:str):
     """ Saves the first frame from a video file and saves the image"""
     cmd = [
-        'ffmpeg', '-y', '-i', video_input, '-frames:v', '1', '-update', '1',
+        'ffmpeg', '-y', '-i', video_input, '-frames:v', '1', '-pix_fmt', PIXEL_FORMAT, '-update', '1',
+        image_output
+    ]
+
+    if not DEBUG:
+        cmd.extend(['-loglevel', 'error'])
+
+    subprocess.run(cmd, check=True)
+
+def save_frame_at_time_as_image(video_input:str, seconds:float, image_output:str):
+    """ Saves the first frame from a video file and saves the image"""
+    cmd = [
+        'ffmpeg', '-y',
+        '-ss', str(seconds),
+        '-i', video_input,
+        '-frames:v', '1', '-vf', 'scale=720:-1', '-update', '1',
         image_output
     ]
 

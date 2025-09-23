@@ -2,3 +2,4 @@ coqui-tts
 scenedetect[opencv]
 pylint
 ollama
+openai-whisper
