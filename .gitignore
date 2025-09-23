@@ -7,3 +7,4 @@
 !tmp/
 !ffmpeg_helper.py
 !pyproject.toml
+!.python-version

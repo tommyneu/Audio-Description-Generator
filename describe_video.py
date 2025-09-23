@@ -4,7 +4,8 @@ import argparse
 import os
 import atexit
 
-from gtts import gTTS
+import torch
+from TTS.api import TTS
 from scenedetect import detect, ContentDetector
 import ollama
 import numpy as np
@@ -23,6 +24,9 @@ FREEZE_FRAME_PADDING = 0.5
 SIMILARLY_SCORE = 0.75
 
 FILES = []
+
+TTS_DEVICE = None
+TTS_OBJ = None
 
 def exit_handler():
     """ Cleans up files before exiting """
@@ -113,8 +117,10 @@ def text_to_audio_file(text:str, audio_output:str):
     if DEBUG:
         print('Text To Speech')
 
-    tts = gTTS(text=text, lang='en')
-    tts.save(audio_output)
+    # tts = gTTS(text=text, lang='en')
+    # tts.save(audio_output)
+
+    TTS_OBJ.tts_to_file(text=text, file_path=audio_output, speaker="p340")
 
 def process_video(video_input:str, video_output:str):
     """ Takes in video and saves an audio description version of the video """
@@ -152,18 +158,18 @@ def process_scene(video_input:str, scene:dict, clips:list, previous_descriptions
 
     if DEBUG:
         print('Processing Scene')
-        print(f'- Scene: {scene['scene_number']}')
+        print(f'- Scene: {scene["scene_number"]}')
         print('Clipping Scene')
 
     # Cut the scene from the video and save a copy
-    scene_video_path = f'./tmp/scene_{scene['scene_number']}.mp4'
+    scene_video_path = f'./tmp/scene_{scene["scene_number"]}.mp4'
     FILES.append(scene_video_path)
     ffmpeg_helper.cut_video_into_clip(video_input, scene_video_path, scene['start_timecode'], scene['end_timecode'])
 
     if DEBUG:
         print('Saving First Frame')
     # Get first frame of the video clip
-    first_frame_path = f'./tmp/scene_{scene['scene_number']}_image.jpeg'
+    first_frame_path = f'./tmp/scene_{scene["scene_number"]}_image.jpeg'
     FILES.append(first_frame_path)
     ffmpeg_helper.save_first_frame_as_image(scene_video_path, first_frame_path)
 
@@ -185,14 +191,14 @@ def process_scene(video_input:str, scene:dict, clips:list, previous_descriptions
     previous_descriptions.append(image_description)
 
     # Create an audio file of narration
-    tts_path = f'./tmp/scene_{scene['scene_number']}_tts.aiff'
+    tts_path = f'./tmp/scene_{scene["scene_number"]}_tts.aiff'
     FILES.append(tts_path)
     text_to_audio_file(image_description, tts_path)
 
     if DEBUG:
         print('Creating Still Frame Video')
     # Create a still frame video clip
-    still_frame_path = f'./tmp/scene_{scene['scene_number']}_still_frame.mp4'
+    still_frame_path = f'./tmp/scene_{scene["scene_number"]}_still_frame.mp4'
     FILES.append(still_frame_path)
     ffmpeg_helper.create_still_frame_narration_clip(tts_path, first_frame_path, still_frame_path)
 
@@ -261,6 +267,10 @@ if __name__ == '__main__':
     SCENE_DETECT_THRESHOLD = float(args.scene_threshold)
 
     ffmpeg_helper.set_video_encoding(args.video_encoding)
+
+    # Get device &&  Init TTS
+    TTS_DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    TTS_OBJ = TTS("tts_models/en/vctk/vits").to(TTS_DEVICE)
 
     try:
         process_video(args.input, args.output)

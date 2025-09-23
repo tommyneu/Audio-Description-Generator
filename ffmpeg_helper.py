@@ -110,7 +110,7 @@ def export_clips_to_file(clips_file_output:str, clips: list):
     """ Taking a list of clips (file paths) it will write it to a file for ffmpeg """
     with open(clips_file_output, 'w', encoding='utf-8') as clips_file:
         for clip in clips:
-            clips_file.write(f'file {clip.replace('./tmp/', '')}\n')
+            clips_file.write(f'file {clip.replace("./tmp/", "")}\n')
 
 def combine_videos(video_output:str, clips_file_input: str):
     """ Taking a clips file it will concat all the videos together """

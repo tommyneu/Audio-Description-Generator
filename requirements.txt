@@ -1,4 +1,4 @@
-gtts
+coqui-tts
 scenedetect[opencv]
 pylint
 ollama
