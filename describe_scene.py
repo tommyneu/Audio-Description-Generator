@@ -21,7 +21,7 @@ def generate_description(images: list, prompt:str, model:str = "gemma3:12b", ret
     # pylint: disable=broad-exception-caught
     except Exception:
         if retries < 3:
-            return generate_description(images, retries + 1)
+            return generate_description(images, prompt, model, retries + 1)
         return ''
 
 def _semantic_similarity(text1: str, text2: str) -> float:
