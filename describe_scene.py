@@ -35,8 +35,8 @@ def _semantic_similarity(text1: str, text2: str) -> float:
 
     return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
 
-def should_skip_description(prev: str, curr: str, similary_threshold:str = 0.75) -> bool:
+def should_skip_description(prev: str, curr: str, similarly_threshold:str = 0.75) -> bool:
     """ Checks to see if two strings are too similar """
     score = _semantic_similarity(prev, curr)
     print(f"Similarity: {score:.3f}")
-    return score >= similary_threshold
+    return score >= similarly_threshold
