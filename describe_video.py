@@ -46,6 +46,8 @@ def process_video(video_input:str, video_output:str):
     FILES.append(normalized_video_path)
     ffmpeg_helper.normalize_video(video_input, normalized_video_path)
 
+    if DEBUG:
+        print('- Converting to Audio')
     audio_file_path = "./tmp/video_audio_conversion.wav"
     FILES.append(audio_file_path)
     ffmpeg_helper.video_to_audio_wav(normalized_video_path, audio_file_path)
@@ -56,14 +58,17 @@ def process_video(video_input:str, video_output:str):
     previous_descriptions = []
 
     # Get the different scenes in the video
+    if DEBUG:
+        print('- Detecting Scenes')
     scenes = audio_block_detect.get_audio_blocks(audio_file_path)
     if DEBUG:
-        print(scenes)
+        for scene in scenes:
+            print(f'-- Scene: {scene["scene_number"]:03},Start: {scene["start_timecode"]}, End: {scene["end_timecode"]}')
     for scene in scenes:
         _process_scene(normalized_video_path, scene, clips, previous_descriptions)
 
     if DEBUG:
-        print('Exporting Clips')
+        print('- Exporting Clips')
     ffmpeg_helper.export_clips_to_file(clips_file_path, clips)
 
     ffmpeg_helper.combine_videos(video_output, clips_file_path)
@@ -74,9 +79,9 @@ def _process_scene(video_input:str, scene:dict, clips:list, previous_description
     """ Processes a specific scene and appends scene video file paths to clips """
 
     if DEBUG:
-        print('Processing Scene')
-        print(f'- Scene: {scene["scene_number"]}')
-        print('Clipping Scene')
+        print('- Processing Scene')
+        print(f'-- Scene: {scene["scene_number"]}')
+        print('-- Clipping Scene')
 
     # Cut the scene from the video and save a copy
     scene_video_path = f'./tmp/scene_{scene["scene_number"]}.mp4'
@@ -86,14 +91,14 @@ def _process_scene(video_input:str, scene:dict, clips:list, previous_description
     clip_duration = ffmpeg_helper.get_duration(scene_video_path)
 
     if DEBUG:
-        print('Saving First Frame')
+        print('-- Saving First Frame')
     # Get first frame of the video clip
     first_frame_path = f'./tmp/scene_{scene["scene_number"]}_first_frame.png'
     FILES.append(first_frame_path)
     ffmpeg_helper.save_first_frame_as_image(scene_video_path, first_frame_path)
 
     if DEBUG:
-        print(f'Saving {FRAMES_PER_CLIP} Frames From Scene')
+        print(f'-- Saving {FRAMES_PER_CLIP} Frames From Scene')
     frame_images = []
     frame_step = clip_duration / FRAMES_PER_CLIP
     for i in range(FRAMES_PER_CLIP):
@@ -105,10 +110,10 @@ def _process_scene(video_input:str, scene:dict, clips:list, previous_description
 
     # Get the image description
     if DEBUG:
-        print('Describing Scene')
+        print('-- Describing Scene')
     image_description = describe_scene.generate_description(frame_images, PROMPT, MODEL)
     if DEBUG:
-        print(f'- Image Description: {image_description}')
+        print(f'--- Image Description: {image_description}')
 
     skipping = False
     if len(previous_descriptions) > 0 and describe_scene.should_skip_description(image_description, previous_descriptions[-1], SIMILARLY_SCORE):
@@ -116,7 +121,7 @@ def _process_scene(video_input:str, scene:dict, clips:list, previous_description
 
     if image_description == '' or skipping:
         if DEBUG:
-            print('No Description or Skipping Narration')
+            print('--- No Description or Skipping Narration')
         clips.append(scene_video_path)
         return
 
@@ -124,13 +129,13 @@ def _process_scene(video_input:str, scene:dict, clips:list, previous_description
 
     # Create an audio file of narration
     if DEBUG:
-        print('Generating Narration')
+        print('-- Generating Narration')
     tts_path = f'./tmp/scene_{scene["scene_number"]}_tts.wav'
     FILES.append(tts_path)
     text_to_speech.generate_audio(image_description, tts_path)
 
     if DEBUG:
-        print('Creating Still Frame Video')
+        print('-- Creating Still Frame Video')
     # Create a still frame video clip
     still_frame_path = f'./tmp/scene_{scene["scene_number"]}_still_frame.mp4'
     FILES.append(still_frame_path)
