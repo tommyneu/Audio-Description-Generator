@@ -63,7 +63,7 @@ def process_video(video_input:str, video_output:str):
     scenes = audio_block_detect.get_audio_blocks(audio_file_path)
     if DEBUG:
         for scene in scenes:
-            print(f'-- Scene: {scene["scene_number"]:03},Start: {scene["start_timecode"]}, End: {scene["end_timecode"]}')
+            print(f'-- Scene: {scene["scene_number"]:03}, Start: {scene["start_timecode"]}, End: {scene["end_timecode"]}')
     for scene in scenes:
         _process_scene(normalized_video_path, scene, clips, previous_descriptions)
 
