@@ -8,7 +8,7 @@ import audio_block_detect
 import describe_scene
 import ffmpeg_helper
 import text_to_speech
-# import visual_scene_detect
+import visual_scene_detect
 
 DEBUG = False
 SAVE_FILES = False
@@ -33,12 +33,22 @@ def _exit_handler():
 
 atexit.register(_exit_handler)
 
+def timecode_to_seconds(timecode: str) -> float:
+    """ Convert a timecode string (hh:mm:ss.ms) to total seconds as a float """
+    hours, minutes, seconds = timecode.split(":")
+    total_seconds = int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+    return total_seconds
+
+def debug_print(message):
+    """ Print message is DEBUG is true """
+    if DEBUG:
+        print(message)
+
 def process_video(video_input:str, video_output:str):
     """ Takes in video and saves an audio description version of the video """
-    if DEBUG:
-        print('Processing Video')
-        print(f'- Video Input: {video_input}')
-        print('- Normalizing Video')
+    debug_print('Processing Video')
+    debug_print(f'- Video Input: {video_input}')
+    debug_print('- Normalizing Video')
 
     # Make tmp dir if not exists
     os.makedirs('./tmp', exist_ok=True)
@@ -46,104 +56,129 @@ def process_video(video_input:str, video_output:str):
     FILES.append(normalized_video_path)
     ffmpeg_helper.normalize_video(video_input, normalized_video_path)
 
-    if DEBUG:
-        print('- Converting to Audio')
+    clips_file_path = './tmp/clips_file.txt'
+    FILES.append(clips_file_path)
+
+    # This is where the final video clip paths will be stored
+    clips = []
+
+    debug_print('- Converting to Audio')
     audio_file_path = "./tmp/video_audio_conversion.wav"
     FILES.append(audio_file_path)
     ffmpeg_helper.video_to_audio_wav(normalized_video_path, audio_file_path)
 
-    clips_file_path = './tmp/clips_file.txt'
-    FILES.append(clips_file_path)
-    clips = []
-    previous_descriptions = []
+    # Get the different scenes in the video
+    debug_print('- Detecting Audio Blocks')
+    audio_blocks = audio_block_detect.get_audio_blocks(audio_file_path)
+    for audio_block in audio_blocks:
+        debug_print(f'-- Audio Block: {audio_block["scene_number"]:03}, Start: {audio_block["start_timecode"]}, End: {audio_block["end_timecode"]}')
 
     # Get the different scenes in the video
-    if DEBUG:
-        print('- Detecting Scenes')
-    scenes = audio_block_detect.get_audio_blocks(audio_file_path)
-    if DEBUG:
-        for scene in scenes:
-            print(f'-- Scene: {scene["scene_number"]:03}, Start: {scene["start_timecode"]}, End: {scene["end_timecode"]}')
-    for scene in scenes:
-        _process_scene(normalized_video_path, scene, clips, previous_descriptions)
+    debug_print('- Detecting Video Blocks')
+    video_blocks = visual_scene_detect.get_visual_scenes(normalized_video_path)
+    for video_block in video_blocks:
+        debug_print(f'-- Video Block: {video_block["scene_number"]:03}, Start: {video_block["start_timecode"]}, End: {video_block["end_timecode"]}')
+
+    current_video_index = 0
+    previous_description = None
+
+    # Loop through audio blocks
+    for audio_block in audio_blocks:
+        scene_descriptions = []
+        debug_print(f'- Processing Audio Block {audio_block["scene_number"]} / {len(audio_blocks)}')
+
+        debug_print('-- Clipping Audio Block')
+        # Clip video at audio block start and end
+        audio_block_clip_path = f'./tmp/audio_block_{audio_block["scene_number"]}.mp4'
+        FILES.append(audio_block_clip_path)
+        ffmpeg_helper.cut_video_into_clip(normalized_video_path, audio_block_clip_path, audio_block["start_timecode"], audio_block["end_timecode"])
+
+        # Loop through the video loop from current_video_index
+        for video_block in video_blocks[current_video_index:]:
+            if timecode_to_seconds(video_block['start_timecode']) > timecode_to_seconds(audio_block['end_timecode']):
+                break
+
+            debug_print(f'-- Processing Video Block {video_block["scene_number"]} / {len(video_blocks)}')
+            # Increment current_video_index
+            current_video_index += 1
+
+            debug_print('--- Clipping Video Block')
+            # Clip video at scene start and end
+            video_block_clip_path = f'./tmp/video_block_{video_block["scene_number"]}.mp4'
+            FILES.append(video_block_clip_path)
+            ffmpeg_helper.cut_video_into_clip(normalized_video_path, video_block_clip_path, video_block["start_timecode"], video_block["end_timecode"])
+
+            # Get duration of clip
+            video_block_duration = ffmpeg_helper.get_duration(video_block_clip_path)
+
+            debug_print(f'--- Saving {FRAMES_PER_CLIP} of video block')
+            # Get `FRAMES_PER_CLIP` evenly spaced frames from clip
+            frame_images = []
+            frame_step = video_block_duration / FRAMES_PER_CLIP
+            for i in range(FRAMES_PER_CLIP):
+                current_frame_time = frame_step * i
+                current_frame_path = f'./tmp/video_block_{video_block["scene_number"]}_frame_{i}.jpeg'
+                FILES.append(current_frame_path)
+                ffmpeg_helper.save_frame_at_time_as_image(video_block_clip_path, current_frame_time, current_frame_path)
+                frame_images.append(current_frame_path)
+
+            debug_print('--- Describing video block')
+            video_block_description = describe_scene.generate_description(frame_images, PROMPT, MODEL)
+            debug_print(f'---- Description: {video_block_description}')
+
+            if video_block_description == '':
+                debug_print('---- Missing Description')
+                continue
+
+            if previous_description is not None:
+                if describe_scene.should_skip_description(previous_description, video_block_description):
+                    debug_print('---- Description too similar to last one ... Skipping')
+                    continue
+
+            previous_description = video_block_description
+            scene_descriptions.append(video_block_description)
+
+        if len(scene_descriptions) > 0:
+
+            # Combine the descriptions somehow
+            combined_description = ' '.join(scene_descriptions)
+
+            debug_print('-- Saving first frame of audio block')
+            # Get the first frame from this block
+            audio_block_first_frame_path = f'./tmp/audio_block_{audio_block["scene_number"]}_first_frame.png'
+            FILES.append(audio_block_first_frame_path)
+            ffmpeg_helper.save_first_frame_as_image(audio_block_clip_path, audio_block_first_frame_path)
+
+            debug_print('-- Generating narration track')
+            # Get TTS from descriptions
+            narration_track_path = f'./tmp/audio_block_{audio_block["scene_number"]}_narration_track.wav'
+            FILES.append(narration_track_path)
+            text_to_speech.generate_audio(combined_description, narration_track_path)
+
+            debug_print('-- Exporting narration clip')
+            # Create still narration clip
+            audio_block_narration_clip_path = f'./tmp/audio_block_{audio_block["scene_number"]}_narration_clip.mp4'
+            FILES.append(audio_block_narration_clip_path)
+            ffmpeg_helper.create_still_frame_narration_clip(narration_track_path, audio_block_first_frame_path, audio_block_narration_clip_path)
+
+            # Append narration clip to clips
+            clips.append(audio_block_narration_clip_path)
+
+        # Append audio block clip to clips
+        clips.append(audio_block_clip_path)
+
 
     if DEBUG:
         print('- Exporting Clips')
     ffmpeg_helper.export_clips_to_file(clips_file_path, clips)
 
+    if DEBUG:
+        print('- Combining Clips')
     ffmpeg_helper.combine_videos(video_output, clips_file_path)
 
+    if DEBUG:
+        print('- Finished and cleaning up files')
     _exit_handler()
-
-def _process_scene(video_input:str, scene:dict, clips:list, previous_descriptions:list):
-    """ Processes a specific scene and appends scene video file paths to clips """
-
-    if DEBUG:
-        print('- Processing Scene')
-        print(f'-- Scene: {scene["scene_number"]}')
-        print('-- Clipping Scene')
-
-    # Cut the scene from the video and save a copy
-    scene_video_path = f'./tmp/scene_{scene["scene_number"]}.mp4'
-    FILES.append(scene_video_path)
-    ffmpeg_helper.cut_video_into_clip(video_input, scene_video_path, scene['start_timecode'], scene['end_timecode'])
-
-    clip_duration = ffmpeg_helper.get_duration(scene_video_path)
-
-    if DEBUG:
-        print('-- Saving First Frame')
-    # Get first frame of the video clip
-    first_frame_path = f'./tmp/scene_{scene["scene_number"]}_first_frame.png'
-    FILES.append(first_frame_path)
-    ffmpeg_helper.save_first_frame_as_image(scene_video_path, first_frame_path)
-
-    if DEBUG:
-        print(f'-- Saving {FRAMES_PER_CLIP} Frames From Scene')
-    frame_images = []
-    frame_step = clip_duration / FRAMES_PER_CLIP
-    for i in range(FRAMES_PER_CLIP):
-        current_frame_time = frame_step * i
-        current_frame_path = f'./tmp/scene_{scene["scene_number"]}_frame_{i}.jpeg'
-        FILES.append(current_frame_path)
-        ffmpeg_helper.save_frame_at_time_as_image(scene_video_path, current_frame_time, current_frame_path)
-        frame_images.append(current_frame_path)
-
-    # Get the image description
-    if DEBUG:
-        print('-- Describing Scene')
-    image_description = describe_scene.generate_description(frame_images, PROMPT, MODEL)
-    if DEBUG:
-        print(f'--- Image Description: {image_description}')
-
-    skipping = False
-    if len(previous_descriptions) > 0 and describe_scene.should_skip_description(image_description, previous_descriptions[-1], SIMILARLY_SCORE):
-        skipping = True
-
-    if image_description == '' or skipping:
-        if DEBUG:
-            print('--- No Description or Skipping Narration')
-        clips.append(scene_video_path)
-        return
-
-    previous_descriptions.append(image_description)
-
-    # Create an audio file of narration
-    if DEBUG:
-        print('-- Generating Narration')
-    tts_path = f'./tmp/scene_{scene["scene_number"]}_tts.wav'
-    FILES.append(tts_path)
-    text_to_speech.generate_audio(image_description, tts_path)
-
-    if DEBUG:
-        print('-- Creating Still Frame Video')
-    # Create a still frame video clip
-    still_frame_path = f'./tmp/scene_{scene["scene_number"]}_still_frame.mp4'
-    FILES.append(still_frame_path)
-    ffmpeg_helper.create_still_frame_narration_clip(tts_path, first_frame_path, still_frame_path)
-
-    clips.append(still_frame_path)
-    clips.append(scene_video_path)
-
 
 # -------------------------------
 # CLI Entry
