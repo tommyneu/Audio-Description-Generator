@@ -1,4 +1,5 @@
 """ FFMPEG helper functions for running common commands """
+import argparse
 import subprocess
 
 VIDEO_ENCODING = 'libx264'
@@ -166,3 +167,110 @@ def combine_videos(video_output:str, clips_file_input: str):
         cmd.extend(['-loglevel', 'error'])
 
     subprocess.run(cmd, check=True)
+
+# -------------------------------
+# CLI Entry
+# -------------------------------
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Detect audio blocks from audio input')
+    parser.add_argument('-f',
+                        '--function',
+                        required=True,
+                        help='Function you wish to run')
+    parser.add_argument('-v',
+                        '--video',
+                        default=None,
+                        help='Video file path input')
+    parser.add_argument('-a',
+                        '--audio',
+                        default=None,
+                        help='Audio file path input')
+    parser.add_argument('-i',
+                        '--image',
+                        default=None,
+                        help='Image file path input')
+    parser.add_argument('-t',
+                        '--text',
+                        default=None,
+                        help='Text file path input')
+    parser.add_argument('-st',
+                        '--start_time',
+                        default=None,
+                        help='Start time in timecode format')
+    parser.add_argument('-et',
+                        '--end_time',
+                        default=None,
+                        help='End time in timecode format')
+    parser.add_argument('-td',
+                        '--time_duration',
+                        default=None,
+                        help='Time in seconds')
+    parser.add_argument('-o',
+                        '--output',
+                        default=None,
+                        help='Output file path')
+    args = parser.parse_args()
+
+    if args.function == 'video_to_audio_wav':
+        if args.video is None:
+            raise ValueError('Missing video input file path')
+        if args.output is None:
+            raise ValueError('Missing output file path')
+        video_to_audio_wav(args.video, args.output)
+
+    elif args.function == 'get_duration':
+        if args.video is not None:
+            print(get_duration(args.video))
+        elif args.audio is not None:
+            print(get_duration(args.audio))
+        raise ValueError('Missing video input file path or audio input path')
+
+    elif args.function == 'normalize_video':
+        if args.video is None:
+            raise ValueError('Missing video input file path')
+        if args.output is None:
+            raise ValueError('Missing output file path')
+        normalize_video(args.video, args.output)
+
+    elif args.function == 'cut_video_into_clip':
+        if args.video is None:
+            raise ValueError('Missing video input file path')
+        if args.output is None:
+            raise ValueError('Missing output file path')
+        if args.start_time is None:
+            raise ValueError('Missing start timecode')
+        if args.end_time is None:
+            raise ValueError('Missing end timecode')
+        cut_video_into_clip(args.video, args.output, args.start_time, args.end_time)
+
+    elif args.function == 'save_first_frame_as_image':
+        if args.video is None:
+            raise ValueError('Missing video input file path')
+        if args.output is None:
+            raise ValueError('Missing output file path')
+        save_first_frame_as_image(args.video, args.output)
+
+    elif args.function == 'save_frame_at_time_as_image':
+        if args.video is None:
+            raise ValueError('Missing video input file path')
+        if args.output is None:
+            raise ValueError('Missing output file path')
+        if args.time_duration is None:
+            raise ValueError('Missing time duration in seconds')
+        save_frame_at_time_as_image(args.video, args.time_duration, args.output)
+
+    elif args.function == 'create_still_frame_narration_clip':
+        if args.image is None:
+            raise ValueError('Missing image input file path')
+        if args.audio is None:
+            raise ValueError('Missing audio input file path')
+        if args.output is None:
+            raise ValueError('Missing output file path')
+        save_frame_at_time_as_image(args.image, args.audio, args.output)
+
+    elif args.function == 'combine_videos':
+        if args.text is None:
+            raise ValueError('Missing text input file path')
+        if args.output is None:
+            raise ValueError('Missing output file path')
+        combine_videos(args.text, args.output)

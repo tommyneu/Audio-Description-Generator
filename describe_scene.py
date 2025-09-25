@@ -1,4 +1,5 @@
 """ Module for describing a video scene based on a list of images """
+import argparse
 import ollama
 import numpy as np
 
@@ -38,5 +39,54 @@ def _semantic_similarity(text1: str, text2: str) -> float:
 def should_skip_description(prev: str, curr: str, similarly_threshold:str = 0.75) -> bool:
     """ Checks to see if two strings are too similar """
     score = _semantic_similarity(prev, curr)
-    print(f"Similarity: {score:.3f}")
     return score >= similarly_threshold
+
+# -------------------------------
+# CLI Entry
+# -------------------------------
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Detect audio blocks from audio input')
+    parser.add_argument('-f',
+                        '--function',
+                        required=True,
+                        help='Function you wish to run')
+    parser.add_argument('-i',
+                        '--images',
+                        nargs='*',
+                        help='image file path')
+    parser.add_argument('-p',
+                        '--prompt',
+                        default='none',
+                        help='Prompt for model')
+    parser.add_argument('-m',
+                        '--model',
+                        default='gemma3:12b',
+                        help='Model to run')
+    parser.add_argument('-s1',
+                        '--string_1',
+                        default='none',
+                        help='String to compare')
+    parser.add_argument('-s2',
+                        '--string_2',
+                        default='none',
+                        help='String to compare')
+    parser.add_argument('-st',
+                        '--similarly_threshold',
+                        default='0.75',
+                        help='Percent threshold for string comparison')
+    args = parser.parse_args()
+
+    if args.function == 'generate_description':
+        if args.images is None:
+            raise ValueError('At least one image is needed')
+        if args.prompt is None:
+            raise ValueError('Prompt is needed')
+        print(generate_description(args.images, args.prompt, args.model))
+
+    elif args.function == 'should_skip_description':
+        if args.string_1 is None:
+            raise ValueError('Missing string 1')
+        if args.string_2 is None:
+            raise ValueError('Missing string 2')
+
+        print(should_skip_description(args.string_1, args.string_2, float(args.similarly_threshold)))

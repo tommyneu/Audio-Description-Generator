@@ -1,8 +1,9 @@
 """ Module for detecting audio blocks """
+import argparse
 import whisper
 import ffmpeg_helper
 
-def get_audio_blocks(audio_input:str) -> list:
+def get_audio_blocks(audio_input:str, min_length:float=5.0) -> list:
     """ Takes in a audio file path and returns  """
     output = []
 
@@ -12,7 +13,7 @@ def get_audio_blocks(audio_input:str) -> list:
     result = model.transcribe(audio_input, fp16=False)
 
     filled_gaps_results = _fill_gaps(result["segments"], total_duration)
-    merged_segments = _merge_short_segments(filled_gaps_results)
+    merged_segments = _merge_short_segments(filled_gaps_results, min_length)
 
     for i, segment in enumerate(merged_segments):
         output.append({
@@ -86,3 +87,20 @@ def _merge_short_segments(segments, min_length=5.0):
 
     merged.append(buffer)
     return merged
+
+# -------------------------------
+# CLI Entry
+# -------------------------------
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Detect audio blocks from audio input')
+    parser.add_argument('-i',
+                        '--input',
+                        required=True,
+                        help='Path to input audio file')
+    parser.add_argument('-ml',
+                        '--min_length',
+                        default='5.0',
+                        help='Minimum length for audio block')
+    args = parser.parse_args()
+
+    print(get_audio_blocks(args.input, float(args.min_length)))
