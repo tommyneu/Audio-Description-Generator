@@ -1,16 +1,43 @@
 """ Module for converting text to an audio file """
 import argparse
+import os
+import uuid
+
 import torch
 from TTS.api import TTS
 
-def generate_audio(text:str, audio_output:str, model:str = 'tts_models/en/vctk/vits', language:str|None = None, speaker:str|None = 'p244'):
+import ffmpeg_helper
+
+def generate_audio(text:str, audio_output:str, model:str = 'tts_models/en/vctk/vits', language:str|None = None, speaker:str|None = 'p244', slow_down_percent:float=0.8):
     """ Takes in a string of text and saves an audio file of the narration of that text """
 
     # Get device && init TTS
     tts_device = 'cuda' if torch.cuda.is_available() else 'cpu'
     tts_obj = TTS(model).to(tts_device)
 
-    tts_obj.tts_to_file(text=text, file_path=audio_output, language=language, speaker=speaker)
+    tmp_file_path = f'./tmp/{uuid.uuid4()}_tts.wav'
+
+    tts_obj.tts_to_file(text=text, file_path=tmp_file_path, language=language, speaker=speaker)
+
+    ffmpeg_helper.slow_down_audio_file(tmp_file_path, audio_output, slow_down_percent)
+
+    _delete_tmp_file(tmp_file_path)
+
+def _delete_tmp_file(file_path):
+    """ Deletes file """
+
+    if not os.path.exists(file_path):
+        return
+
+    if not os.path.isfile(file_path):
+        raise ValueError('Trying to delete a non-file')
+
+    file_path = os.path.abspath(file_path)
+    directory_path = os.path.abspath('./tmp')
+    if not os.path.dirname(file_path) == directory_path:
+        raise ValueError('Trying to delete a file outside tmp folder')
+
+    os.remove(file_path)
 
 # -------------------------------
 # CLI Entry

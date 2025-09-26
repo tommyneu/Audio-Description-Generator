@@ -44,6 +44,21 @@ def video_to_audio_wav(video_input:str, audio_output:str):
 
     subprocess.run(cmd, check=True)
 
+def slow_down_audio_file(audio_input:str, audio_output:str, slow_down_percent:float = 0.8):
+    """ Slow down audio file by specified percentage"""
+    cmd = [
+        'ffmpeg', '-y',
+        '-i', audio_input,
+        '-filter:a', f'atempo={slow_down_percent}',
+        audio_output
+    ]
+
+    if not DEBUG:
+        cmd.extend(['-loglevel', 'error'])
+
+    subprocess.run(cmd, check=True)
+
+
 def get_duration(media_input:str) -> float:
     """ Converts a video file to the audio wav file """
     cmd = [
