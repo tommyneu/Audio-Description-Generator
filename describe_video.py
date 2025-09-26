@@ -110,7 +110,7 @@ def process_video(video_input:str, video_output:str):
     # Loop through audio blocks
     for audio_block in audio_blocks:
         scene_descriptions = []
-        debug_print(f'- Processing Audio Block {audio_block["scene_number"]} / {len(audio_blocks)}')
+        debug_print(f'- Processing Audio Block {audio_block["scene_number"]} / {len(audio_blocks) - 1}')
 
         debug_print('-- Clipping Audio Block')
         # Clip video at audio block start and end
@@ -123,7 +123,7 @@ def process_video(video_input:str, video_output:str):
             if timecode_to_seconds(video_block['start_timecode']) > timecode_to_seconds(audio_block['end_timecode']):
                 break
 
-            debug_print(f'-- Processing Video Block {video_block["scene_number"]} / {len(video_blocks)}')
+            debug_print(f'-- Processing Video Block {video_block["scene_number"]} / {len(video_blocks) - 1}')
             # Increment current_video_index
             current_video_index += 1
 
