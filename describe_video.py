@@ -147,9 +147,16 @@ def process_video(video_input:str, video_output:str):
                 ffmpeg_helper.save_frame_at_time_as_image(video_block_clip_path, current_frame_time, current_frame_path)
                 frame_images.append(current_frame_path)
 
+            debug_print('--- Deleting video block clip')
+            delete_tmp_file(video_block_clip_path)
+
             debug_print('--- Describing video block')
             video_block_description = describe_scene.generate_description(frame_images, PROMPT, MODEL)
             debug_print(f'---- Description: {video_block_description}')
+
+            debug_print('--- Deleting video block frames')
+            for file_path in frame_images:
+                delete_tmp_file(file_path)
 
             if video_block_description == '':
                 debug_print('---- Missing Description')
@@ -162,11 +169,6 @@ def process_video(video_input:str, video_output:str):
 
             previous_description = video_block_description
             scene_descriptions.append(video_block_description)
-
-            debug_print('--- Video block frames & clip')
-            for file_path in frame_images:
-                delete_tmp_file(file_path)
-            delete_tmp_file(video_block_clip_path)
 
         if len(scene_descriptions) > 0:
 
