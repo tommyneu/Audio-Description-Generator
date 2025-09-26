@@ -17,7 +17,7 @@ SAVE_FILES = False
 MODEL = 'gemma3:12b'
 
 # pylint: disable=line-too-long
-PROMPT = 'You are a video audio description service. These images are frames from a scene, describe the what is happening in the scene. Make sure your response is one coherent thought. Your response should contain only the description with no extra text, explanations, or conversational phrases.'
+PROMPT = 'You are a video audio description service. These images are frames from a scene, describe the what is happening in the scene. Make sure to describe all text in any of the images. Make sure your response is one coherent thought and never reference the scene as single images. Your response should contain only the description with no extra text, explanations, or conversational phrases.'
 SIMILARLY_SCORE = 0.75
 FRAMES_PER_CLIP=5
 
