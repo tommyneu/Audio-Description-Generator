@@ -8,7 +8,7 @@ from TTS.api import TTS
 
 import ffmpeg_helper
 
-def generate_audio(text:str, audio_output:str, model:str = 'tts_models/en/vctk/vits', language:str|None = None, speaker:str|None = 'p244', slow_down_percent:float=0.8):
+def generate_audio(text:str, audio_output:str, model:str = 'tts_models/en/vctk/vits', language:str|None = None, speaker:str|None = 'p244', slow_down_percent:float=0.9):
     """ Takes in a string of text and saves an audio file of the narration of that text """
 
     # Get device && init TTS
