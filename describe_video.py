@@ -4,6 +4,7 @@ import argparse
 import os
 import atexit
 import uuid
+import time
 
 import audio_block_detect
 import describe_scene
@@ -17,7 +18,7 @@ SAVE_FILES = False
 MODEL = 'gemma3:12b'
 
 # pylint: disable=line-too-long
-PROMPT = 'You are a video audio description service. These images are frames from a scene, describe the what is happening in the scene. Make sure to describe all text in any of the images. Make sure your response is one coherent thought and never reference the scene as single images. Your response should contain only the description with no extra text, explanations, or conversational phrases.'
+PROMPT = 'You are a video audio description service. These images are frames from a scene, describe the what is happening in the scene. Make sure to describe all text in any of the images. Make sure your response is one coherent thought and never say "the scene", "the video", "the video frames", or "the images". Your response should contain only the description with no extra text, explanations, or conversational phrases.'
 SIMILARLY_SCORE = 0.75
 FRAMES_PER_CLIP=5
 
@@ -54,6 +55,12 @@ def timecode_to_seconds(timecode: str) -> float:
     hours, minutes, seconds = timecode.split(":")
     total_seconds = int(hours) * 3600 + int(minutes) * 60 + float(seconds)
     return total_seconds
+
+def format_elapsed_time(elapsed_seconds: float) -> str:
+    """ Returns a formatted time string for printing"""
+    minutes = int(elapsed_seconds // 60)
+    seconds = int(elapsed_seconds % 60)
+    return f"{minutes}m {seconds}s"
 
 def debug_print(message):
     """ Print message is DEBUG is true """
@@ -203,16 +210,13 @@ def process_video(video_input:str, video_output:str):
         # Append audio block clip to clips
         clips.append(audio_block_clip_path)
 
-    if DEBUG:
-        print('- Exporting Clips')
+    debug_print('- Exporting Clips')
     ffmpeg_helper.export_clips_to_file(clips_file_path, clips)
 
-    if DEBUG:
-        print('- Combining Clips')
+    debug_print('- Combining Clips')
     ffmpeg_helper.combine_videos(video_output, clips_file_path)
 
-    if DEBUG:
-        print('- Finished and cleaning up files')
+    debug_print('- Finished and cleaning up files')
     _exit_handler()
 
 # -------------------------------
@@ -268,7 +272,15 @@ if __name__ == '__main__':
 
     ffmpeg_helper.set_video_encoding(args.video_encoding)
 
+    # Record the start time
+    start_time = time.time()
+
     try:
         process_video(args.input, args.output)
+
+        # Calculate the elapsed time
+        elapsed_time = time.time() - start_time
+        debug_print(format_elapsed_time(elapsed_time))
+
     except KeyboardInterrupt:
         _exit_handler()
