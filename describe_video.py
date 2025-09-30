@@ -158,6 +158,7 @@ def process_video(video_input:str, video_output:str):
             delete_tmp_file(video_block_clip_path)
 
             debug_print('--- Describing video block')
+            debug_print(f'---- Model: {MODEL}')
             video_block_description = describe_scene.generate_description(frame_images, PROMPT, MODEL)
             debug_print(f'---- Description: {video_block_description}')
 
