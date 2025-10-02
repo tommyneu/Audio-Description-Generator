@@ -171,7 +171,7 @@ def process_video(video_input:str, video_output:str):
                 continue
 
             if previous_description is not None:
-                if describe_scene.should_skip_description(previous_description, video_block_description):
+                if describe_scene.should_skip_description(previous_description, video_block_description, SIMILARLY_SCORE):
                     debug_print('---- Description too similar to last one ... Skipping')
                     continue
 
