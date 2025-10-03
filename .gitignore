@@ -12,3 +12,4 @@
 !describe_scene.py
 !text_to_speech.py
 !visual_scene_detect.py
+!process_video.py

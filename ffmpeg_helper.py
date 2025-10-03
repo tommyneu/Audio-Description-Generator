@@ -31,6 +31,21 @@ def set_debug(new_debug:bool):
     global VIDEO_ENCODING
     VIDEO_ENCODING = new_debug
 
+def timecode_to_seconds(timecode: str) -> float:
+    """ Convert a timecode string (hh:mm:ss.ms) to total seconds as a float """
+    hours, minutes, seconds = timecode.split(":")
+    total_seconds = int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+    return total_seconds
+
+def seconds_to_timecode(seconds: float) -> str:
+    """Convert total seconds as a float to a timecode string (hh:mm:ss.ms)."""
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = seconds % 60  # keep fractional part
+    
+    # Format with 2-digit hours/minutes and 2 decimal places for seconds
+    return f"{hours:02}:{minutes:02}:{secs:06.3f}"
+
 def video_to_audio_wav(video_input:str, audio_output:str):
     """ Converts a video file to the audio wav file """
     cmd = [
@@ -57,7 +72,6 @@ def slow_down_audio_file(audio_input:str, audio_output:str, slow_down_percent:fl
         cmd.extend(['-loglevel', 'error'])
 
     subprocess.run(cmd, check=True)
-
 
 def get_duration(media_input:str) -> float:
     """ Converts a video file to the audio wav file """
@@ -172,9 +186,10 @@ def combine_videos(video_output:str, clips_file_input: str):
         'ffmpeg', '-y',
         # Concat videos into one video clip
         '-f', 'concat', '-safe', '0', '-i', clips_file_input,
-        # Tell it to copy the video but to re-encode the audio
-        # if you don't include `-af aresample=async=1000` then the audio and video get out of sync for some reason
-        '-c:v', 'copy', '-af', 'aresample=async=1000',
+        # We will re-encode the concatenated video so include the video and audio settings
+        '-c:v', VIDEO_ENCODING, '-preset', ENCODER_PRESET,
+        '-crf', CONSTANT_RATE_FACTOR, '-pix_fmt', PIXEL_FORMAT, '-r', FRAME_RATE,
+        '-c:a', AUDIO_ENCODING, '-b:a', BITRATE, '-ar', SAMPLE_RATE, '-ac', AUDIO_CHANNELS,
         video_output
     ]
 
