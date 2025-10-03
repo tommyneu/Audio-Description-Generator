@@ -18,7 +18,7 @@ SAVE_FILES = False
 MODEL = 'gemma3:12b'
 
 # pylint: disable=line-too-long
-PROMPT = 'You are a video audio description service. These images are frames from a scene, describe the what is happening in the scene. Make sure to describe all text in any of the images. Make sure your response is one coherent thought and never say "the scene", "the video", "the video frames", or "the images". Your response should contain only the description with no extra text, explanations, or conversational phrases.'
+PROMPT = 'You are a video audio description service. These images are frames from a scene, describe the what is happening in the scene. Make sure to describe all text in any of the images. Make sure your response is one coherent thought. Your responses should never contain "the scene", "the video", "the video shows", "the video frames", or "the images". Your response should contain only the description with no extra text, explanations, or conversational phrases.'
 SIMILARLY_SCORE = 0.75
 FRAMES_PER_CLIP=5
 
@@ -270,6 +270,8 @@ if __name__ == '__main__':
         SAVE_FILES = True
 
     MODEL = args.model
+    PROMPT = args.prompt
+    SIMILARLY_SCORE = float(args.similarity_score)
 
     ffmpeg_helper.set_video_encoding(args.video_encoding)
 
