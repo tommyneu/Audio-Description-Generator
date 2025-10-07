@@ -17,7 +17,7 @@ SAVE_FILES = False
 MODEL = 'gemma3:12b'
 
 # pylint: disable=line-too-long
-PROMPT = 'You are a video audio description service. These images are frames from a scene, describe the what is happening in the scene. Make sure to describe all text in any of the images. Make sure your response is one coherent thought. Your responses should never contain "the scene", "the video", "the video shows", "the video frames", or "the images". Your response should contain only the description with no extra text, explanations, or conversational phrases.'
+PROMPT = 'You are a video audio description service. These images are frames from a scene, describe the important information of what is happening in the scene for blind users. Make sure to describe all text in any of the images. Make sure your response is one coherent thought. Your responses should never contain "the scene", "the video", "the video shows", "the video frames", or "the images". Your response should contain only the description with no extra text, explanations, or conversational phrases.'
 SIMILARLY_SCORE = 0.75
 FRAMES_PER_CLIP=5
 
@@ -82,19 +82,11 @@ def process_video(video_input:str, script_output:str):
     os.makedirs('./tmp', exist_ok=True)
     tmp_path = f'./tmp/{video_uuid}_'
 
-    debug_print('Converting to Audio')
-    audio_file_path = f'{tmp_path}video_audio_conversion.wav'
-    FILES.append(audio_file_path)
-    ffmpeg_helper.video_to_audio_wav(video_input, audio_file_path)
-
     # Get the different scenes in the video
     debug_print('Detecting Audio Blocks')
-    audio_blocks = audio_block_detect.get_audio_blocks(audio_file_path)
+    audio_blocks = audio_block_detect.get_audio_blocks(video_input)
     for audio_block in audio_blocks:
-        debug_print(f'- Audio Block: {audio_block["scene_number"]:03}, Start: {audio_block["start_timecode"]}, End: {audio_block["end_timecode"]}')
-
-    debug_print('Deleting audio conversion', True)
-    delete_tmp_file(audio_file_path)
+        debug_print(f'- Audio Block: {audio_block["scene_number"]:03}, Start: {audio_block["start_timecode"]}, End: {audio_block["end_timecode"]}, Text: {audio_block["text"]}')
 
     # Get the different scenes in the video
     debug_print('Detecting Video Blocks')
@@ -142,7 +134,10 @@ def process_video(video_input:str, script_output:str):
 
             debug_print('Describing video block')
             debug_print(f'- Model: {MODEL}')
-            video_block_description = describe_scene.generate_description(frame_images, PROMPT, MODEL)
+            ai_prompt = PROMPT
+            if audio_block['text'] != '' and len(audio_block['text']) < 1000:
+                ai_prompt += f" Here is the text transcript of what is being spoken during this scene: \"{audio_block['text']}\""
+            video_block_description = describe_scene.generate_description(frame_images, ai_prompt, MODEL)
             debug_print(f'- Description: {video_block_description}')
 
             debug_print('Deleting video block frames and clip')
