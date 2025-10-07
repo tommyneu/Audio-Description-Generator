@@ -115,7 +115,7 @@ def process_video(script_input:str, video_input:str, video_output:str):
             debug_print('Getting video frame')
             frame_at_time_path = f'{tmp_path}{line_count}_video_frame.png'
             FILES.append(frame_at_time_path)
-            ffmpeg_helper.save_frame_at_time_as_image(video_input, timestamp, frame_at_time_path)
+            ffmpeg_helper.save_frame_at_time_as_image(video_input, timestamp, frame_at_time_path, False)
 
             debug_print('Generating narration clip')
             narration_clip_path = f'{tmp_path}{line_count}_narration_clip.mp4'

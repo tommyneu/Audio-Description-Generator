@@ -135,15 +135,21 @@ def save_first_frame_as_image(video_input:str, image_output:str):
 
     subprocess.run(cmd, check=True)
 
-def save_frame_at_time_as_image(video_input:str, seconds:float, image_output:str):
+def save_frame_at_time_as_image(video_input:str, seconds:float, image_output:str, scale_image:bool = True):
     """ Saves the first frame from a video file and saves the image"""
     cmd = [
         'ffmpeg', '-y',
         '-ss', str(seconds),
         '-i', video_input,
-        '-frames:v', '1', '-vf', 'scale=720:-1', '-update', '1',
+        '-frames:v', '1']
+
+    if scale_image :
+        cmd.extend(['-vf', 'scale=720:-1'])
+
+    cmd.extend([
+        '-update', '1',
         image_output
-    ]
+    ])
 
     if not DEBUG:
         cmd.extend(['-loglevel', 'error'])
