@@ -111,6 +111,8 @@ def process_video(video_input:str, script_output:str):
     for audio_block in audio_blocks:
         scene_descriptions = []
 
+        debug_print(f'Processing Audio Block {audio_block["scene_number"]} / {len(audio_blocks) - 1}')
+
         for video_block in video_blocks[current_video_index:]:
             if timecode_to_seconds(video_block['start_timecode']) > timecode_to_seconds(audio_block['end_timecode']):
                 break
