@@ -9,7 +9,6 @@ import time
 import audio_block_detect
 import describe_scene
 import ffmpeg_helper
-import text_to_speech
 import visual_scene_detect
 
 DEBUG = False
