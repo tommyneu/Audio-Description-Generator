@@ -42,9 +42,19 @@ def seconds_to_timecode(seconds: float) -> str:
     hours = int(seconds // 3600)
     minutes = int((seconds % 3600) // 60)
     secs = seconds % 60  # keep fractional part
-    
+
     # Format with 2-digit hours/minutes and 2 decimal places for seconds
     return f"{hours:02}:{minutes:02}:{secs:06.3f}"
+
+def frame_to_timecode(video_input: str, frame_number: int) -> str:
+    """ Converts a frame number to hh:mm:ss.ms timecode for a given video """
+    fps = get_framerate(video_input)
+
+    # Convert frame number to seconds
+    seconds = frame_number / fps
+
+    # Convert seconds to timecode string
+    return seconds_to_timecode(seconds)
 
 def video_to_audio_wav(video_input:str, audio_output:str):
     """ Converts a video file to the audio wav file """
@@ -82,6 +92,35 @@ def get_duration(media_input:str) -> float:
 
     result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     return float(result.stdout)
+
+def get_framerate(video_input: str) -> int:
+    """ Get video FPS using ffprobe """
+    fps_cmd = [
+        'ffprobe', '-v', 'quiet', '-select_streams', 'v:0',
+        '-show_entries', 'stream=r_frame_rate',
+        '-of', 'default=nokey=1:noprint_wrappers=1',
+        video_input
+    ]
+    fps_result = subprocess.run(fps_cmd, capture_output=True, text=True, check=True)
+    num, denom = map(int, fps_result.stdout.strip().split('/'))
+    fps = num / denom
+
+    return fps
+
+def get_total_frames(video_input: str) -> int:
+    """
+    Returns the total number of frames in a video using ffprobe.
+    """
+    cmd = [
+        'ffprobe', '-v', 'quiet',
+        '-select_streams', 'v:0',
+        '-count_packets', '-show_entries', 'stream=nb_read_packets', '-of', 'csv=p=0',
+        video_input
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+    return float(result.stdout)
+
 
 def normalize_video(video_input:str, video_output:str):
     """ Taking the input video and normalizing it to standard video parameters """
@@ -135,16 +174,16 @@ def save_first_frame_as_image(video_input:str, image_output:str):
 
     subprocess.run(cmd, check=True)
 
-def save_frame_at_time_as_image(video_input:str, seconds:float, image_output:str, scale_image:bool = True):
-    """ Saves the first frame from a video file and saves the image"""
+def save_frame_at_time_as_image(video_input:str, seconds:float, image_output:str, image_scale:int=0):
+    """ Saves the first frame from a video file and saves the image """
     cmd = [
         'ffmpeg', '-y',
         '-ss', str(seconds),
         '-i', video_input,
         '-frames:v', '1']
 
-    if scale_image :
-        cmd.extend(['-vf', 'scale=720:-1'])
+    if image_scale > 0:
+        cmd.extend(['-vf', f'scale={image_scale}:-1'])
 
     cmd.extend([
         '-update', '1',
@@ -154,6 +193,19 @@ def save_frame_at_time_as_image(video_input:str, seconds:float, image_output:str
     if not DEBUG:
         cmd.extend(['-loglevel', 'error'])
 
+    subprocess.run(cmd, check=True)
+
+def save_frame_by_number(video_input:str, frame_number:int, output_image:str, image_scale:int=0):
+    """ Save a specific frame by frame number using ffmpeg """
+    # Convert frame number to timecode
+    timecode = frame_to_timecode(video_input, frame_number)
+
+    cmd = ['ffmpeg', '-v', 'quiet', '-y', '-i', video_input, '-ss', timecode, '-frames:v', '1']
+
+    if image_scale > 0:
+        cmd.extend(['-vf', f'scale={image_scale}:{-1}'])
+
+    cmd.append(output_image)
     subprocess.run(cmd, check=True)
 
 def create_still_frame_narration_clip(audio_input:str, image_input:str, video_output:str):

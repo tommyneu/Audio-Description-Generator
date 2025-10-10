@@ -9,7 +9,7 @@ import time
 import audio_block_detect
 import describe_scene
 import ffmpeg_helper
-import visual_scene_detect
+import visual_scene_detect_clip
 
 DEBUG = False
 SAVE_FILES = False
@@ -19,6 +19,7 @@ MODEL = 'gemma3:12b'
 # pylint: disable=line-too-long
 PROMPT = 'You are a video audio description service. These images are frames from a scene, describe the important information of what is happening in the scene for blind users. Make sure to describe all text in any of the images. Make sure your response is one coherent thought. Your responses should never contain "the scene", "the video", "the video shows", "the video frames", or "the images". Your response should contain only the description with no extra text, explanations, or conversational phrases.'
 SIMILARLY_SCORE = 0.75
+SCENE_THRESHOLD = 27.0
 FRAMES_PER_CLIP=5
 
 FILES = []
@@ -90,7 +91,7 @@ def process_video(video_input:str, script_output:str):
 
     # Get the different scenes in the video
     debug_print('Detecting Video Blocks')
-    video_blocks = visual_scene_detect.get_visual_scenes(video_input)
+    video_blocks = visual_scene_detect_clip.get_visual_scenes(video_input, 2, SCENE_THRESHOLD)
     for video_block in video_blocks:
         debug_print(f'- Video Block: {video_block["scene_number"]:03}, Start: {video_block["start_timecode"]}, End: {video_block["end_timecode"]}')
 
@@ -129,7 +130,7 @@ def process_video(video_input:str, script_output:str):
                 current_frame_time = frame_step * i
                 current_frame_path = f'{tmp_path}video_block_{video_block["scene_number"]}_frame_{i}.jpeg'
                 FILES.append(current_frame_path)
-                ffmpeg_helper.save_frame_at_time_as_image(video_block_clip_path, current_frame_time, current_frame_path)
+                ffmpeg_helper.save_frame_at_time_as_image(video_block_clip_path, current_frame_time, current_frame_path, 720)
                 frame_images.append(current_frame_path)
 
             debug_print('Describing video block')
@@ -192,6 +193,10 @@ if __name__ == '__main__':
                         '--prompt',
                         default=PROMPT,
                         help='Ollama model to use for describing images')
+    parser.add_argument('-st',
+                        '--scene_threshold',
+                        default=SCENE_THRESHOLD,
+                        help='Threshold for scene detect')
     parser.add_argument('-ss',
                         '--similarity_score',
                         default=SIMILARLY_SCORE,
@@ -223,6 +228,7 @@ if __name__ == '__main__':
     MODEL = args.model
     PROMPT = args.prompt
     SIMILARLY_SCORE = float(args.similarity_score)
+    SCENE_THRESHOLD = float(args.scene_threshold)
 
     ffmpeg_helper.set_video_encoding(args.video_encoding)
 

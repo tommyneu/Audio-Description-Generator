@@ -3,3 +3,8 @@ scenedetect[opencv]
 pylint
 ollama
 openai-whisper
+
+torch
+torchvision
+pillow
+git+https://github.com/openai/CLIP.git
