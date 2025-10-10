@@ -41,8 +41,6 @@ def get_audio_blocks(audio_input: str, min_pause: float = 0.6):
         gap = start - last_end
         last_end = float(single_word["end"])
 
-        print(single_word, gap)
-
         # We found a big enough gap in the speech so we should save everything before this as a block
         if gap > min_pause:
             if text_buffer_start is None:
