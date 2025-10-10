@@ -19,7 +19,7 @@ MODEL = 'gemma3:12b'
 # pylint: disable=line-too-long
 PROMPT = 'You are a video audio description service. These images are frames from a scene, describe the important information of what is happening in the scene for blind users. Make sure to describe all text in any of the images. Make sure your response is one coherent thought. Your responses should never contain "the scene", "the video", "the video shows", "the video frames", or "the images". Your response should contain only the description with no extra text, explanations, or conversational phrases.'
 SIMILARLY_SCORE = 0.75
-SCENE_THRESHOLD = 27.0
+SCENE_THRESHOLD = 0.9
 FRAMES_PER_CLIP=5
 
 FILES = []
