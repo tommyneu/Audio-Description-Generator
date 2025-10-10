@@ -5,6 +5,7 @@ import numpy as np
 
 def generate_description(images: list, prompt:str, model:str = "gemma3:12b", retries: int = 0) -> str:
     """Takes in an image path and returns a description of that image"""
+
     try:
         response = ollama.chat(
             model=model,
@@ -25,7 +26,7 @@ def generate_description(images: list, prompt:str, model:str = "gemma3:12b", ret
             return generate_description(images, prompt, model, retries + 1)
         return ''
 
-def _semantic_similarity(text1: str, text2: str) -> float:
+def semantic_similarity(text1: str, text2: str) -> float:
     """ Using Ollama embeds returns a score for how similar two strings are """
     # Get embeddings from Ollama
     e1 = ollama.embeddings(model="nomic-embed-text", prompt=text1)["embedding"]
@@ -35,11 +36,6 @@ def _semantic_similarity(text1: str, text2: str) -> float:
     vec2 = np.array(e2)
 
     return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
-
-def should_skip_description(prev: str, curr: str, similarly_threshold:str = 0.75) -> bool:
-    """ Checks to see if two strings are too similar """
-    score = _semantic_similarity(prev, curr)
-    return score >= similarly_threshold
 
 # -------------------------------
 # CLI Entry
@@ -70,10 +66,6 @@ if __name__ == '__main__':
                         '--string_2',
                         default='none',
                         help='String to compare')
-    parser.add_argument('-st',
-                        '--similarly_threshold',
-                        default='0.75',
-                        help='Percent threshold for string comparison')
     args = parser.parse_args()
 
     if args.function == 'generate_description':
@@ -83,10 +75,10 @@ if __name__ == '__main__':
             raise ValueError('Prompt is needed')
         print(generate_description(args.images, args.prompt, args.model))
 
-    elif args.function == 'should_skip_description':
+    elif args.function == 'semantic_similarity':
         if args.string_1 is None:
             raise ValueError('Missing string 1')
         if args.string_2 is None:
             raise ValueError('Missing string 2')
 
-        print(should_skip_description(args.string_1, args.string_2, float(args.similarly_threshold)))
+        print(semantic_similarity(args.string_1, args.string_2))

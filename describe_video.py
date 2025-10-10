@@ -18,7 +18,7 @@ MODEL = 'gemma3:12b'
 
 # pylint: disable=line-too-long
 PROMPT = 'You are a video audio description service. These images are frames from a scene, describe the important information of what is happening in the scene for blind users. Make sure to describe all text in any of the images. Make sure your response is one coherent thought. Your responses should never contain "the scene", "the video", "the video shows", "the video frames", or "the images". Your response should contain only the description with no extra text, explanations, or conversational phrases.'
-SIMILARLY_SCORE = 0.75
+SIMILARITY_SCORE_THRESHOLD = 0.75
 SCENE_THRESHOLD = 0.9
 FRAMES_PER_CLIP=5
 
@@ -138,6 +138,7 @@ def process_video(video_input:str, script_output:str):
             ai_prompt = PROMPT
             if audio_block['text'] != '' and len(audio_block['text']) < 1000:
                 ai_prompt += f" Here is the text transcript of what is being spoken during this scene: \"{audio_block['text']}\""
+            debug_print(f'- Prompt: {ai_prompt}')
             video_block_description = describe_scene.generate_description(frame_images, ai_prompt, MODEL)
             debug_print(f'- Description: {video_block_description}')
 
@@ -151,8 +152,10 @@ def process_video(video_input:str, script_output:str):
                 continue
 
             if previous_description is not None:
-                if describe_scene.should_skip_description(previous_description, video_block_description, SIMILARLY_SCORE):
-                    debug_print('Description too similar to last one ... Skipping')
+                similarity_score = describe_scene.semantic_similarity(previous_description, video_block_description)
+                debug_print(f'- Description Similarity Score: {similarity_score}')
+                if similarity_score > SIMILARITY_SCORE_THRESHOLD:
+                    debug_print('- Description too similar to last one ... Skipping')
                     continue
 
             previous_description = video_block_description
@@ -199,7 +202,7 @@ if __name__ == '__main__':
                         help='Threshold for scene detect')
     parser.add_argument('-ss',
                         '--similarity_score',
-                        default=SIMILARLY_SCORE,
+                        default=SIMILARITY_SCORE_THRESHOLD,
                         help='Similarly score between two scene descriptions')
     parser.add_argument('-ve',
                         '--video_encoding',
@@ -227,7 +230,7 @@ if __name__ == '__main__':
 
     MODEL = args.model
     PROMPT = args.prompt
-    SIMILARLY_SCORE = float(args.similarity_score)
+    SIMILARITY_SCORE_THRESHOLD = float(args.similarity_score)
     SCENE_THRESHOLD = float(args.scene_threshold)
 
     ffmpeg_helper.set_video_encoding(args.video_encoding)
