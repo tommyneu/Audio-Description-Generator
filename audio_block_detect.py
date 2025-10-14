@@ -3,7 +3,7 @@ import argparse
 import whisper
 import ffmpeg_helper
 
-def get_audio_blocks(audio_input: str, min_pause: float = 0.6):
+def get_audio_blocks(audio_input:str, min_pause:float=0.6, min_confidence:float=0.4):
     """
     Returns both speech and pause blocks based on word-level timestamps.
     Uses Whisper's own segmentation (not amplitude-based silence).
@@ -23,74 +23,67 @@ def get_audio_blocks(audio_input: str, min_pause: float = 0.6):
     words = []
     for seg in result["segments"]:
         if "words" in seg:
-            words.extend(seg["words"])
+            for w in seg["words"]:
+                # Some Whisper variants use `probability`, others `avg_logprob`
+                conf = w.get("probability", None)
+                if conf is None:
+                    # Convert avg_logprob (typically around -0.2 to -1.2) to a rough probability
+                    conf = pow(10, w.get("avg_logprob", -1))
+                w["confidence"] = conf
+                words.append(w)
+
+    # Filter out low-confidence words
+    words = [w for w in words if w["confidence"] >= min_confidence]
 
     if not words:
         return []
 
     blocks = []
     block_count = 0
-    last_end = 0.0
 
     text_buffer = ''
-    text_buffer_start = None
+    text_buffer_start = 0.0
+    text_buffer_end = 0.0
 
     # Iterate through all recognized words
-    for index, single_word in enumerate(words):
-        start = float(single_word["start"])
-        gap = start - last_end
-        last_end = float(single_word["end"])
+    for single_word in words:
+        current_word_start = float(single_word["start"])
+        current_word_end = float(single_word["end"])
+        gap = current_word_start - text_buffer_end
 
-        # We found a big enough gap in the speech so we should save everything before this as a block
+        print(single_word, gap)
+
+        # We found a big enough gap in the speech so we should save the buffer
         if gap > min_pause:
-            if text_buffer_start is None:
+            if text_buffer_start != text_buffer_end:
                 blocks.append({
-                    'scene_number': block_count,
-                    'text' : text_buffer.strip(),
-                    'start_timecode': ffmpeg_helper.seconds_to_timecode(0.0),
-                    'end_timecode': ffmpeg_helper.seconds_to_timecode(float(single_word["end"]))
+                    "scene_number": block_count,
+                    "text": text_buffer.strip(),
+                    "start_timecode": ffmpeg_helper.seconds_to_timecode(text_buffer_start),
+                    "end_timecode": ffmpeg_helper.seconds_to_timecode(text_buffer_end)
                 })
-            else:
-                blocks.append({
-                    'scene_number': block_count,
-                    'text' : text_buffer.strip(),
-                    'start_timecode': ffmpeg_helper.seconds_to_timecode(text_buffer_start),
-                    'end_timecode': ffmpeg_helper.seconds_to_timecode(float(single_word["end"]))
-                })
-                text_buffer_start = None
             text_buffer = ''
+            text_buffer_start = current_word_start - gap
             block_count += 1
 
-        # We are on the last word so we need to add this text buffer to the blocks
-        elif index == len(words) - 1:
-            # We need to get that last word
-            text_buffer += single_word['word']
-            blocks.append({
-                'scene_number': block_count,
-                'text' : text_buffer,
-                'start_timecode': ffmpeg_helper.seconds_to_timecode(text_buffer_start),
-                'end_timecode': ffmpeg_helper.seconds_to_timecode(float(single_word["end"]))
-            })
-            text_buffer = ''
-            # We still increment in case we have extra space at the end of the video
-            block_count += 1
-
-        # No gap so we can extend the text buffer
-        else:
-            if text_buffer_start is None:
-                text_buffer_start = start
-
-        # We are looking to see if the previous word and this word has a gap
-        # So we are always adding this word to the next block
+        text_buffer_end = current_word_end
         text_buffer += single_word['word']
 
-    # We need to fill in the remaining time
-    if last_end < total_duration:
+    # Get the last block
+    blocks.append({
+        "scene_number": block_count,
+        "text": text_buffer.strip(),
+        "start_timecode": ffmpeg_helper.seconds_to_timecode(text_buffer_start),
+        "end_timecode": ffmpeg_helper.seconds_to_timecode(text_buffer_end)
+    })
+
+    # Add a block for the end of the video
+    if text_buffer_end < total_duration:
         blocks.append({
-            'scene_number': block_count,
-            'text' : '',
-            'start_timecode': ffmpeg_helper.seconds_to_timecode(last_end),
-            'end_timecode': ffmpeg_helper.seconds_to_timecode(total_duration)
+            "scene_number": block_count + 1,
+            "text": '',
+            "start_timecode": ffmpeg_helper.seconds_to_timecode(text_buffer_end),
+            "end_timecode": ffmpeg_helper.seconds_to_timecode(total_duration)
         })
 
     return blocks
@@ -108,6 +101,10 @@ if __name__ == '__main__':
                         '--min_length',
                         default='0.6',
                         help='Minimum length for audio block')
+    parser.add_argument('-mc',
+                        '--min_confidence',
+                        default='0.4',
+                        help='Minimum confidence for keeping a word')
     args = parser.parse_args()
 
     print(get_audio_blocks(args.input, float(args.min_length)))

@@ -164,8 +164,17 @@ def process_video(video_input:str, script_output:str):
         if len(scene_descriptions) > 0:
             # Combine the descriptions somehow
             formatted_time = str(ffmpeg_helper.timecode_to_seconds(audio_block['start_timecode']))
-            script_line = formatted_time + ' ' +' '.join(scene_descriptions)
 
+            formatted_descriptions = scene_descriptions[0]
+            if len(scene_descriptions) > 1:
+                debug_print('- Combining descriptions')
+                formatted_descriptions = describe_scene.merge_scene_descriptions(scene_descriptions, MODEL)
+
+            # Remove new lines
+            formatted_descriptions = formatted_descriptions.replace('\n', '')
+
+            debug_print('- Writing To Script')
+            script_line = formatted_time + ' ' + formatted_descriptions
             video_narration_script.append(script_line)
 
     with open(script_output, "w", encoding="utf-8") as f:

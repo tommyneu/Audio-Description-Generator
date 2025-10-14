@@ -37,6 +37,43 @@ def semantic_similarity(text1: str, text2: str) -> float:
 
     return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
 
+def merge_scene_descriptions(descriptions_input: list[str], model:str = "gemma3:12b", retries:int=0)-> str:
+    """ Merges multiple descriptions into one """
+
+    prompt = (
+        "You are an audio description generator. "
+        "Your task is to merge multiple short video segment descriptions into a single cohesive, "
+        "natural-sounding audio description suitable for blind or low-vision audiences.\n\n"
+        "Guidelines:\n"
+        "- Describe what is visually happening, not what people might think or feel.\n"
+        "- Use clear, concise, sensory language that could be read aloud.\n"
+        "- Maintain chronological order and key actions.\n"
+        "- Avoid dialogue or speculation.\n"
+        "- Write in the present tense and use a neutral tone.\n\n"
+        "Your response should contain only the description with no extra text, explanations, or conversational phrases.\n\n"
+        "Here are the segment descriptions:\n\n"
+        + "\n".join([f"- {desc}" for desc in descriptions_input])
+    )
+
+    try:
+        response = ollama.chat(
+            model=model,
+            messages=[{
+                'role': 'user',
+                'content': prompt,
+            }]
+        )
+
+        # Extract the text from the response
+        description = response['message']['content'].strip()
+        return description or ''
+
+    # pylint: disable=broad-exception-caught
+    except Exception:
+        if retries < 3:
+            return generate_description(descriptions_input, model, retries + 1)
+        return ''
+
 # -------------------------------
 # CLI Entry
 # -------------------------------
