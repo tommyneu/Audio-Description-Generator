@@ -17,7 +17,6 @@ SAVE_FILES = False
 MODEL = 'gemma3:12b'
 
 # pylint: disable=line-too-long
-PROMPT = 'You are a video audio description service. These images are frames from a scene, describe the important information of what is happening in the scene for blind users. Make sure to describe all text in any of the images. Make sure your response is one coherent thought. Your responses should never contain "the scene", "the video", "the video shows", "the video frames", or "the images". Your response should contain only the description with no extra text, explanations, or conversational phrases.'
 SIMILARITY_SCORE_THRESHOLD = 0.75
 SCENE_THRESHOLD = 0.9
 FRAMES_PER_CLIP=5
@@ -135,11 +134,7 @@ def process_video(video_input:str, script_output:str):
 
             debug_print('Describing video block')
             debug_print(f'- Model: {MODEL}')
-            ai_prompt = PROMPT
-            if audio_block['text'] != '' and len(audio_block['text']) < 1000:
-                ai_prompt += f" Here is the text transcript of what is being spoken during this scene: \"{audio_block['text']}\""
-            debug_print(f'- Prompt: {ai_prompt}')
-            video_block_description = describe_scene.generate_description(frame_images, ai_prompt, MODEL)
+            video_block_description = describe_scene.generate_description(frame_images, MODEL)
             debug_print(f'- Description: {video_block_description}')
 
             debug_print('Deleting video block frames and clip')
@@ -201,10 +196,6 @@ if __name__ == '__main__':
                         '--model',
                         default=MODEL,
                         help='Ollama model to use for describing images')
-    parser.add_argument('-p',
-                        '--prompt',
-                        default=PROMPT,
-                        help='Ollama model to use for describing images')
     parser.add_argument('-st',
                         '--scene_threshold',
                         default=SCENE_THRESHOLD,
@@ -238,7 +229,6 @@ if __name__ == '__main__':
         SAVE_FILES = True
 
     MODEL = args.model
-    PROMPT = args.prompt
     SIMILARITY_SCORE_THRESHOLD = float(args.similarity_score)
     SCENE_THRESHOLD = float(args.scene_threshold)
 
