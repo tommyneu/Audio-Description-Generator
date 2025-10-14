@@ -115,7 +115,8 @@ if __name__ == "__main__":
         description="Semantic scene detection using CLIP and ffmpeg."
     )
     parser.add_argument(
-        "video",
+        "-i",
+        "--input",
         type=str,
         help="Path to the input video file"
     )
@@ -144,11 +145,11 @@ if __name__ == "__main__":
 
     try:
         debug_print('Processing')
-        resulting_scenes = get_visual_scenes(args.video, args.seconds_per_check, args.scene_threshold)
+        resulting_scenes = get_visual_scenes(args.input, args.seconds_per_check, args.scene_threshold)
 
         debug_print('\nDetected scenes:')
         for single_scene in resulting_scenes:
-            print(f"Scene: {single_scene['scene']:03d}, Start:{single_scene['start']}, End:{single_scene['end']}")
+            print(f"Scene: {single_scene['scene_number']:03d}, Start:{single_scene['start_timecode']}, End:{single_scene['end_timecode']}")
 
     except KeyboardInterrupt:
         _exit_handler()
