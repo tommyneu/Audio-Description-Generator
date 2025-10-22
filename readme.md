@@ -1,5 +1,11 @@
 # Audio Description Project
 
+A CLI based audio description generation tool built on Python leveraging the power of Ollama, Whisper, CLIP, Coqui TTS and FFMPEG.
+
+## Installation
+
+Installation is written for MacOS
+
 1. Install pyenv for python 3.11
     1. Run `brew install pyenv`
     2. Add these commands to your `~/.zshrc` or `~/bashrc`
@@ -20,8 +26,9 @@
     - Every time you start a new terminal for the project run `source ./venv/bin/activate`
     - [Python Environments](https://marketplace.visualstudio.com/items?itemName=ms-python.vscode-python-envs) will run that for you
 5. Run `pip3 install -r requirements.txt`
-6. Run `python3 describe_video.py --input ./my_video.mp4 --output ./my_video_audio_description.mp4`
+6. Run `python3 ./describe_video.py --input ./my_video.mp4 --output ./my_video_script.txt` to generate a video script file
+7. Then run `python3 ./process_video.py --input_video ./my_video.mp4 --input_text ./my_video_script.txt --output ./my_video_audio_description.mp4`
 
 ## Pylint
 
-To run pylint, run`pylint describe_video.py`. Pylint configuration is located in `./pyproject.toml`
+To run pylint, run`pylint ./describe_video.py`. Pylint configuration is located in `./pyproject.toml`
