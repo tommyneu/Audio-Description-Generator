@@ -208,6 +208,10 @@ if __name__ == '__main__':
                         '--video_encoding',
                         default=ffmpeg_helper.VIDEO_ENCODING,
                         help='Video encoding for ffmpeg')
+    parser.add_argument('-fpc',
+                        '--frames_per_clip',
+                        default=FRAMES_PER_CLIP,
+                        help='Number of video frames per scene clip')
     parser.add_argument('--debug',
                         action='store_true',
                         help='Debug mode')
@@ -231,6 +235,7 @@ if __name__ == '__main__':
     MODEL = args.model
     SIMILARITY_SCORE_THRESHOLD = float(args.similarity_score)
     SCENE_THRESHOLD = float(args.scene_threshold)
+    FRAMES_PER_CLIP = float(args.frames_per_clip)
 
     ffmpeg_helper.set_video_encoding(args.video_encoding)
 
