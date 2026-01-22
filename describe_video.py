@@ -235,7 +235,7 @@ if __name__ == '__main__':
     MODEL = args.model
     SIMILARITY_SCORE_THRESHOLD = float(args.similarity_score)
     SCENE_THRESHOLD = float(args.scene_threshold)
-    FRAMES_PER_CLIP = float(args.frames_per_clip)
+    FRAMES_PER_CLIP = int(args.frames_per_clip)
 
     ffmpeg_helper.set_video_encoding(args.video_encoding)
 
