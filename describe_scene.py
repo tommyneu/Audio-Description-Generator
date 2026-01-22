@@ -24,6 +24,7 @@ sequence of input images, which represent a single visual scene from a video.
 6.  Focus on identifying key visual elements: people, actions, locations, and essential on-screen text.
 7.  Prioritize actions and changes across the image sequence.
 8.  Maintain a neutral, objective tone.
+9.  **Do not** use any text formatting or emojis.
 
 **Task:** Synthesize the visual information from the input images into a single, cohesive,
 action-oriented audio description that is ready to be voiced.'''
